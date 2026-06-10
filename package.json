@@ -1,0 +1,33 @@
+{
+  "name": "cocos-psd-prefab-2x",
+  "version": "1.0.0",
+  "description": "Standalone Cocos Creator 2.4.x editor extension: convert a Photoshop .psd into a prefab (PNG export + sprite-frame meta + MD5 image dedup + transparent-edge trim), driven by a layer naming convention. Code-friendly output: English names, type prefixes, unique sibling names.",
+  "author": "liyu",
+  "license": "MIT",
+  "main": "main.js",
+  "repository": { "type": "git", "url": "https://github.com/shiliyu1991-lang/cocos-psd-prefab-2x.git" },
+  "main-menu": {
+    "PSD 工具/PSD 转预制体": {
+      "message": "cocos-psd-prefab-2x:open"
+    }
+  },
+  "panel": {
+    "main": "panel/index.js",
+    "type": "dockable",
+    "title": "PSD 转预制体",
+    "width": 440,
+    "height": 470,
+    "min-width": 360,
+    "min-height": 320
+  },
+  "bin": { "psd2prefab": "psd2prefab.js" },
+  "scripts": {
+    "make-sample": "node test/make_test_psd.js"
+  },
+  "dependencies": {
+    "ag-psd": "^30.0.0",
+    "pngjs": "^7.0.0",
+    "pinyin-pro": "^3.0.0"
+  },
+  "engines": { "node": ">=14" }
+}

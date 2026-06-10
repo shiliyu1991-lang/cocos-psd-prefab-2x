@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSD → 预制体 操作指南（Cocos Creator 2.4.15）</title>
+<style>
+  :root{
+    --bg:#0f1419; --card:#171d26; --card2:#1d2530; --ink:#e6edf3; --mut:#9aa7b4;
+    --line:#2a3543; --accent:#2b6cb0; --accent2:#3c9; --warn:#d6a32a; --bad:#d66;
+    --code:#0b1118;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,"Microsoft YaHei",sans-serif;
+    line-height:1.7;font-size:15px}
+  .wrap{max-width:920px;margin:0 auto;padding:32px 22px 80px}
+  h1{font-size:28px;margin:0 0 6px}
+  .sub{color:var(--mut);margin:0 0 26px}
+  h2{font-size:20px;margin:38px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  h3{font-size:16px;margin:22px 0 8px;color:#cdd9e5}
+  p{margin:8px 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:18px 20px;margin:14px 0}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:680px){.grid{grid-template-columns:1fr}}
+  code,kbd{background:var(--code);border:1px solid var(--line);border-radius:5px;
+    padding:1px 6px;font-family:"SF Mono",Consolas,monospace;font-size:13px;color:#cfe}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:9px;
+    padding:14px 16px;overflow:auto;font-size:13px;color:#bfe}
+  pre code{background:none;border:none;padding:0}
+  .step{display:flex;gap:16px;align-items:flex-start;margin:18px 0}
+  .num{flex:none;width:34px;height:34px;border-radius:50%;background:var(--accent);
+    color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;
+    font-size:16px;margin-top:2px}
+  .step .body{flex:1}
+  .step h3{margin:2px 0 6px}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+  th{background:var(--card2);color:#cdd9e5}
+  td code{font-size:12.5px}
+  .tag{display:inline-block;padding:1px 8px;border-radius:20px;font-size:12px;
+    border:1px solid var(--line)}
+  .ok{color:var(--accent2);border-color:#2a5}.warn{color:var(--warn);border-color:#7a5}
+  .bad{color:var(--bad);border-color:#844}
+  .note{border-left:3px solid var(--accent);background:#16202c;padding:10px 14px;
+    border-radius:0 8px 8px 0;margin:12px 0}
+  .note.w{border-color:var(--warn);background:#221d11}
+  figure{margin:14px 0;text-align:center}
+  figcaption{color:var(--mut);font-size:13px;margin-top:6px}
+  svg{max-width:100%;height:auto;background:var(--card);border:1px solid var(--line);
+    border-radius:12px}
+  ul{margin:8px 0 8px 0;padding-left:22px}
+  li{margin:4px 0}
+  .kbd{font-size:12px}
+  footer{margin-top:50px;color:var(--mut);font-size:13px;border-top:1px solid var(--line);
+    padding-top:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>PSD → 预制体 操作指南</h1>
+  <p class="sub">Cocos Creator 2.4.15 · cocos-psd-prefab-2x 扩展</p>
+
+  <div class="card">
+    <strong>一句话流程：</strong>装好依赖 → 打开面板 → 选 PSD → 点转换。工具会按图层命名规范
+    自动导出图片、建节点树、生成预制体，并用 MD5 去重让相同图片只导一次。
+  </div>
+
+  <!-- 总览流程图 -->
+  <figure>
+  <svg viewBox="0 0 880 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="总流程">
+    <defs>
+      <marker id="ar" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+        <path d="M0,0 L7,3 L0,6 Z" fill="#3c9"/>
+      </marker>
+    </defs>
+    <g font-family="Segoe UI, sans-serif">
+      <g>
+        <rect x="20" y="70" width="140" height="60" rx="10" fill="#1d2530" stroke="#2b6cb0"/>
+        <text x="90" y="95" fill="#e6edf3" font-size="14" text-anchor="middle">① 设计 PSD</text>
+        <text x="90" y="114" fill="#9aa7b4" font-size="11" text-anchor="middle">按规范命名图层</text>
+      </g>
+      <g>
+        <rect x="200" y="70" width="140" height="60" rx="10" fill="#1d2530" stroke="#2b6cb0"/>
+        <text x="270" y="95" fill="#e6edf3" font-size="14" text-anchor="middle">② 装依赖</text>
+        <text x="270" y="114" fill="#9aa7b4" font-size="11" text-anchor="middle">npm install</text>
+      </g>
+      <g>
+        <rect x="380" y="70" width="140" height="60" rx="10" fill="#1d2530" stroke="#2b6cb0"/>
+        <text x="450" y="95" fill="#e6edf3" font-size="14" text-anchor="middle">③ 打开面板</text>
+        <text x="450" y="114" fill="#9aa7b4" font-size="11" text-anchor="middle">PSD 工具</text>
+      </g>
+      <g>
+        <rect x="560" y="70" width="140" height="60" rx="10" fill="#1d2530" stroke="#2b6cb0"/>
+        <text x="630" y="95" fill="#e6edf3" font-size="14" text-anchor="middle">④ 选 PSD·转换</text>
+        <text x="630" y="114" fill="#9aa7b4" font-size="11" text-anchor="middle">一键</text>
+      </g>
+      <g>
+        <rect x="740" y="70" width="120" height="60" rx="10" fill="#152a22" stroke="#3c9"/>
+        <text x="800" y="95" fill="#9fe" font-size="14" text-anchor="middle">⑤ 预制体</text>
+        <text x="800" y="114" fill="#9aa7b4" font-size="11" text-anchor="middle">assets/PSD</text>
+      </g>
+      <line x1="162" y1="100" x2="196" y2="100" stroke="#3c9" stroke-width="2" marker-end="url(#ar)"/>
+      <line x1="342" y1="100" x2="376" y2="100" stroke="#3c9" stroke-width="2" marker-end="url(#ar)"/>
+      <line x1="522" y1="100" x2="556" y2="100" stroke="#3c9" stroke-width="2" marker-end="url(#ar)"/>
+      <line x1="702" y1="100" x2="736" y2="100" stroke="#3c9" stroke-width="2" marker-end="url(#ar)"/>
+    </g>
+  </svg>
+  <figcaption>整体五步流程</figcaption>
+  </figure>
+
+  <h2>0. 准备：安装依赖（只需一次）</h2>
+  <p>把 <code>cocos-psd-prefab-2x</code> 放进工程 <code>packages/</code> 后,在该扩展目录执行一次安装
+  (若用的是含依赖的 Release 整包则可跳过):</p>
+  <pre><code>cd &lt;你的工程&gt;/packages/cocos-psd-prefab-2x
+npm install</code></pre>
+  <div class="note w">没装依赖就点转换，面板会提示
+  <code>failed to load converter deps … run npm install …</code>，照提示装一下即可。</div>
+
+  <h2>1. 按命名规范设计 PSD</h2>
+  <p>图层名决定生成什么节点、是否创建、是否复用图片。下图是 PSD 图层树到预制体节点树的对应关系：</p>
+
+  <figure>
+  <svg viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="图层到节点映射">
+    <g font-family="Consolas, monospace" font-size="13">
+      <rect x="20" y="20" width="380" height="320" rx="10" fill="#11202c" stroke="#2a3543"/>
+      <text x="36" y="44" fill="#9fe" font-size="14" font-family="Segoe UI">PSD 图层（Photoshop）</text>
+      <text x="40" y="78" fill="#e6edf3">📁 弹窗</text>
+      <text x="64" y="102" fill="#cfe">🖼 sp_背景 #40</text>
+      <text x="64" y="126" fill="#cfe">T  lbl_标题</text>
+      <text x="64" y="150" fill="#e6edf3">📁 btn_确定</text>
+      <text x="92" y="174" fill="#cfe">🖼 normal / pressed</text>
+      <text x="92" y="198" fill="#cfe">T  lbl_文字</text>
+      <text x="64" y="222" fill="#e6edf3">📁 lay_v_列表</text>
+      <text x="92" y="246" fill="#cfe">🖼 icon_star</text>
+      <text x="92" y="270" fill="#cfe">🖼 icon_star2  (同图)</text>
+      <text x="64" y="294" fill="#777">// 设计参考线</text>
+      <text x="64" y="316" fill="#777">ref_对齐底图 · 隐藏层</text>
+
+      <line x1="404" y1="180" x2="476" y2="180" stroke="#3c9" stroke-width="2.5" marker-end="url(#ar2)"/>
+      <defs><marker id="ar2" markerWidth="12" markerHeight="12" refX="8" refY="4" orient="auto">
+        <path d="M0,0 L9,4 L0,8 Z" fill="#3c9"/></marker></defs>
+      <text x="440" y="170" fill="#3c9" font-size="11" font-family="Segoe UI" text-anchor="middle">转换</text>
+
+      <rect x="480" y="20" width="380" height="320" rx="10" fill="#15251c" stroke="#2a4a39"/>
+      <text x="496" y="44" fill="#9fe" font-size="14" font-family="Segoe UI">预制体节点（Cocos）</text>
+      <text x="500" y="78" fill="#e6edf3">▸ Node_TanChuan  <tspan fill="#6b7">Node</tspan></text>
+      <text x="524" y="102" fill="#cfe">▸ Img_BeiJing  <tspan fill="#6b7">Sprite·九宫格</tspan></text>
+      <text x="524" y="126" fill="#cfe">▸ Label_BiaoTi  <tspan fill="#6b7">Label</tspan></text>
+      <text x="524" y="150" fill="#e6edf3">▸ Node_QueDing  <tspan fill="#6b7">Button</tspan></text>
+      <text x="552" y="174" fill="#cfe">▸ Img_normal/pressed</text>
+      <text x="552" y="198" fill="#cfe">▸ Label_WenZi  <tspan fill="#6b7">Label</tspan></text>
+      <text x="524" y="222" fill="#e6edf3">▸ Node_LieBiao  <tspan fill="#6b7">Layout·垂直</tspan></text>
+      <text x="552" y="246" fill="#cfe">▸ Img_icon_star</text>
+      <text x="552" y="270" fill="#cfe">▸ Img_icon_sta2 <tspan fill="#da6">↩共用同图</tspan></text>
+      <text x="524" y="298" fill="#777">（注释 / 参考 / 隐藏</text>
+      <text x="524" y="318" fill="#777"> 全部跳过，不创建）</text>
+    </g>
+  </svg>
+  <figcaption>左：PSD 图层树　→　右：自动生成的预制体节点树(节点名自动转英文+类型前缀)</figcaption>
+  </figure>
+
+  <h3>常用命名速查</h3>
+  <table>
+    <tr><th>写法</th><th>结果</th></tr>
+    <tr><td>（无前缀的位图层）</td><td>Sprite 节点</td></tr>
+    <tr><td><code>lbl_标题</code> 或 文字图层</td><td>Label 文本节点(文字图层无需前缀也会自动识别)</td></tr>
+    <tr><td><code>btn_确定</code>（图层组）</td><td>Button，组内 <code>normal/pressed/hover/disabled</code> 作为各状态图</td></tr>
+    <tr><td><code>sp_框 #40</code></td><td>九宫格 Sprite，四边边距 40（顺序：上,右,下,左）</td></tr>
+    <tr><td><code>lay_v_列表</code> / <code>lay_h_</code> / <code>lay_grid_</code></td><td>带 Layout 的容器（垂直 / 水平 / 网格）</td></tr>
+    <tr><td><code>node_容器</code></td><td>空节点容器</td></tr>
+    <tr><td><code>icon @2x</code></td><td>高清图，节点尺寸按倍数缩小</td></tr>
+    <tr><td><code>icon =common_star</code></td><td>直接引用已有资源，不再导图</td></tr>
+    <tr><td><code>//xxx</code> · <code>!xxx</code> · <code>ref_xxx</code> · <code>tmp_xxx</code></td><td><span class="tag bad">忽略</span> 不创建节点、不导图</td></tr>
+    <tr><td>隐藏层 / 全透明 / 空层 / 空组</td><td><span class="tag bad">忽略</span></td></tr>
+  </table>
+  <div class="note">完整规范见同目录的 <code>PSD命名规范.md</code>。</div>
+
+  <h2>2. 打开扩展面板</h2>
+  <div class="step">
+    <div class="num">A</div>
+    <div class="body">
+      <h3>在 Cocos Creator 顶部菜单选 <code>PSD 工具 / PSD 转预制体</code></h3>
+      <p>弹出可停靠面板「PSD → 预制体」。</p>
+    </div>
+  </div>
+
+  <!-- 面板示意图 -->
+  <figure>
+  <svg viewBox="0 0 420 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="面板示意">
+    <rect x="0" y="0" width="420" height="470" rx="12" fill="#171d26" stroke="#2a3543"/>
+    <text x="20" y="34" fill="#9fe" font-size="14" font-weight="bold" font-family="Segoe UI">PSD → 预制体</text>
+    <line x1="16" y1="46" x2="404" y2="46" stroke="#2a3543"/>
+
+    <text x="20" y="74" fill="#9aa7b4" font-size="12" font-family="Segoe UI">PSD 文件</text>
+    <rect x="92" y="60" width="308" height="22" rx="4" fill="#0b1118" stroke="#3a4655"/>
+    <rect x="300" y="90" width="100" height="26" rx="5" fill="#3a3a3a" stroke="#555"/>
+    <text x="350" y="107" fill="#ddd" font-size="12" text-anchor="middle" font-family="Segoe UI">选择 PSD</text>
+
+    <text x="20" y="146" fill="#9aa7b4" font-size="12" font-family="Segoe UI">输出目录</text>
+    <rect x="92" y="132" width="308" height="22" rx="4" fill="#0b1118" stroke="#3a4655"/>
+    <text x="20" y="176" fill="#9aa7b4" font-size="12" font-family="Segoe UI">预制体名</text>
+    <rect x="92" y="162" width="308" height="22" rx="4" fill="#0b1118" stroke="#3a4655"/>
+
+    <g font-family="Segoe UI" font-size="11.5" fill="#aaa">
+      <rect x="20" y="198" width="13" height="13" rx="3" fill="#2b6cb0"/><path d="M22.5,204.5 l3,3 l5,-6" stroke="#fff" stroke-width="2" fill="none"/><text x="40" y="209">MD5 去重复用相同图片</text>
+      <rect x="20" y="220" width="13" height="13" rx="3" fill="#2b6cb0"/><path d="M22.5,226.5 l3,3 l5,-6" stroke="#fff" stroke-width="2" fill="none"/><text x="40" y="231">裁剪图片四周透明边</text>
+      <rect x="20" y="242" width="13" height="13" rx="3" fill="#2b6cb0"/><path d="M22.5,248.5 l3,3 l5,-6" stroke="#fff" stroke-width="2" fill="none"/><text x="40" y="253">压平只含1个子节点的空容器</text>
+      <rect x="20" y="264" width="13" height="13" rx="3" fill="#0b1118" stroke="#556"/><text x="40" y="275">合并重叠的装饰图(实验)</text>
+      <rect x="20" y="286" width="13" height="13" rx="3" fill="#0b1118" stroke="#556"/><text x="40" y="297">检测缓存图片是否还在</text>
+    </g>
+
+    <rect x="20" y="312" width="380" height="34" rx="6" fill="#2b6cb0" stroke="#2b6cb0"/>
+    <text x="210" y="334" fill="#fff" font-size="14" text-anchor="middle" font-weight="bold" font-family="Segoe UI">转换为预制体</text>
+
+    <rect x="20" y="356" width="380" height="46" rx="6" fill="#11202c" stroke="#2a3543"/>
+    <text x="32" y="378" fill="#3c9" font-size="11.5" font-family="Segoe UI">完成 节点 278 · 新图 147 · 复用 41 · 裁剪 148 · 压平 21</text>
+    <text x="32" y="395" fill="#9aa7b4" font-size="11" font-family="Consolas">db://assets/PSD/prefabs/Bag.prefab</text>
+
+    <text x="20" y="432" fill="#6b7686" font-size="11" font-family="Segoe UI">提示：转换完成后会自动刷新资源库并导入。</text>
+  </svg>
+  <figcaption>面板「PSD → 预制体」一栏示意（数字为示例运行结果）</figcaption>
+  </figure>
+
+  <h2>3. 选 PSD，点转换</h2>
+  <div class="step"><div class="num">1</div><div class="body">
+    <h3>点「选择 PSD」</h3><p>在弹出的文件框里选你的 <code>.psd</code>，路径会回填到上面的输入框。</p>
+  </div></div>
+  <div class="step"><div class="num">2</div><div class="body">
+    <h3>（可选）填输出目录 / 预制体名</h3>
+    <p>输出目录默认 <code>PSD</code>（即写到 <code>assets/PSD/</code>）。预制体名留空则用 PSD 文件名。</p>
+  </div></div>
+  <div class="step"><div class="num">3</div><div class="body">
+    <h3>（可选）勾选 MD5 去重</h3>
+    <p>默认开。开启后内容相同的图片只导入一张，多个节点 / 多个预制体共用，跨多次运行也生效。</p>
+  </div></div>
+  <div class="step"><div class="num">4</div><div class="body">
+    <h3>（可选）勾选「裁剪图片四周透明边」</h3>
+    <p>默认<strong>勾选</strong>。有些图层是一小块图外加一大圈透明，直接导出会得到超大图、尺寸和位置都不对。勾上后会自动裁掉全透明边，用真实内容当尺寸与位置——<strong>尺寸、位置都更准</strong>，结果显示「裁剪 N」。若不想改变原图就<strong>取消勾选</strong>;也可对单个图层用 <code>@nocrop</code> 保留留白，九宫格 <code>sp_</code> 永不裁剪。</p>
+  </div></div>
+  <div class="step"><div class="num">5</div><div class="body">
+    <h3>（可选）勾选「压平只含1个子节点的空容器」</h3>
+    <p>默认<strong>勾选</strong>。PSD 的"组/拷贝"常只包一个子节点，层级又深又乱。勾上后会把这种无组件、只有 1 个子的空容器合并掉，并<strong>保留外层有意义的名字</strong>，节点树更扁平、好写代码，结果显示「压平 N」。<br>另外工具会自动让<strong>同父节点下节点名唯一</strong>(重名加 <code>_2</code>)，并在 8 字符截断时<strong>保留末尾数字</strong>(<code>形状590→XingZ590</code>)，确保 <code>getChildByName</code> 能定位——这是写代码的硬保证，无开关。</p>
+  </div></div>
+  <div class="step"><div class="num">6</div><div class="body">
+    <h3>（可选）勾选「合并重叠的装饰图」<span class="tag warn">实验</span></h3>
+    <p>默认<strong>不勾</strong>。一个元素常由"外发光 + 内层"两张几乎一样的图叠成，勾上后会把同位置、尺寸相近的相邻兄弟图只保留一张。会改变外观，按需开启，结果显示「合并 N」。</p>
+  </div></div>
+  <div class="step"><div class="num">7</div><div class="body">
+    <h3>（可选）勾选「检测缓存图片是否还在」</h3>
+    <p>默认<strong>不勾</strong>。去重表会记住已导出过的图；如果你之后手动删了某张 PNG，默认会复用缓存、不再重导，导致预制体引用到丢失的图。勾上后，复用每张图前会先检查文件是否还在，<strong>被删过就自动重新导出</strong>，结果会显示「重导 N」。平时不勾更快；删过图 / 换过素材 / 发现有图显示不出来时勾一次自愈。</p>
+  </div></div>
+  <div class="step"><div class="num">8</div><div class="body">
+    <h3>点「转换为预制体」</h3>
+    <p>完成后面板显示 <span class="tag ok">节点 / 新图 / 复用 / 裁剪 / 压平 / 合并 / 重导 / 忽略</span> 数量与预制体路径，资源库自动刷新。</p>
+  </div></div>
+
+  <h2>4. 产物在哪</h2>
+  <pre><code>assets/&lt;输出目录&gt;/
+├── prefabs/&lt;预制体名&gt;.prefab        ← 双击打开就是还原的界面
+├── textures/&lt;图层名&gt;.png(.meta)      ← 每张图带 spriteFrame
+└── .psd_assets.json                  ← MD5 去重表（自动维护，勿手删）</code></pre>
+
+  <h2>5. 关键点是怎么保证的</h2>
+  <div class="grid">
+    <div class="card"><strong>① 位置精确对齐</strong>
+      <p>每张图按图层<em>真实像素包围盒</em>导出(自动裁透明边)，锚点统一 (0.5,0.5)，节点坐标 = 包围盒中心换算到
+      Cocos 坐标系。导出盒与算坐标盒是同一个，做到像素级对齐（实测误差&lt;0.5px）。</p></div>
+    <div class="card"><strong>② 无用节点不创建</strong>
+      <p>注释 / 参考 / 临时前缀、隐藏层、全透明、空包围盒、空组在解析阶段直接过滤，既不建节点也不导图。</p></div>
+    <div class="card"><strong>③ 相同图片按 MD5 复用</strong>
+      <p>对裁切后的 PNG 字节算 MD5，命中持久化去重表就复用已有 spriteFrame 的 uuid，不再写新图。</p></div>
+    <div class="card"><strong>④ 代码友好命名</strong>
+      <p>节点名全英文 + 类型前缀(Img_/Label_/Node_) + 后缀≤8 + 同父唯一，<code>getChildByName</code> 稳定可用。</p></div>
+  </div>
+
+  <h2>6. 对齐原理图</h2>
+  <figure>
+  <svg viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="坐标换算">
+    <g font-family="Segoe UI, sans-serif" font-size="12">
+      <rect x="40" y="40" width="320" height="220" fill="#11202c" stroke="#2a3543"/>
+      <text x="48" y="32" fill="#9aa7b4">PSD：左上原点，y 向下</text>
+      <circle cx="40" cy="40" r="4" fill="#d66"/>
+      <text x="50" y="56" fill="#d66" font-size="11">(0,0)</text>
+      <rect x="200" y="110" width="90" height="60" fill="#2b6cb0" opacity="0.5" stroke="#6cf"/>
+      <circle cx="245" cy="140" r="4" fill="#9fe"/>
+      <text x="252" y="138" fill="#9fe" font-size="11">图层中心(cx,cy)</text>
+      <line x1="40" y1="140" x2="245" y2="140" stroke="#557" stroke-dasharray="3 3"/>
+      <line x1="245" y1="40" x2="245" y2="140" stroke="#557" stroke-dasharray="3 3"/>
+
+      <line x1="375" y1="150" x2="445" y2="150" stroke="#3c9" stroke-width="2.5" marker-end="url(#ar2)"/>
+
+      <rect x="470" y="40" width="320" height="220" fill="#15251c" stroke="#2a4a39"/>
+      <text x="478" y="32" fill="#9aa7b4">Cocos：中心原点，y 向上</text>
+      <line x1="630" y1="40" x2="630" y2="260" stroke="#3a4655"/>
+      <line x1="470" y1="150" x2="790" y2="150" stroke="#3a4655"/>
+      <circle cx="630" cy="150" r="4" fill="#d66"/>
+      <text x="636" y="166" fill="#d66" font-size="11">(0,0)</text>
+      <rect x="585" y="120" width="90" height="60" fill="#3c9" opacity="0.45" stroke="#9fe"/>
+      <circle cx="675" cy="120" r="4" fill="#9fe"/>
+      <text x="560" y="205" fill="#cfe" font-size="11.5">x = cx − W/2</text>
+      <text x="560" y="223" fill="#cfe" font-size="11.5">y = H/2 − cy</text>
+    </g>
+  </svg>
+  <figcaption>坐标系换算：同一个包围盒既用于导图裁切，也用于算节点坐标 → 像素级对齐</figcaption>
+  </figure>
+
+  <h2>7. 常见问题</h2>
+  <table>
+    <tr><th>现象</th><th>处理</th></tr>
+    <tr><td>点转换提示 <code>failed to load converter deps</code></td><td>在扩展目录 <code>cocos-psd-prefab-2x</code> 跑 <code>npm install</code></td></tr>
+    <tr><td>预制体没出现在资源面板</td><td>稍等资源库刷新，或手动右键 <code>assets/PSD</code> → Reimport</td></tr>
+    <tr><td>预制体有图显示不出来（删过图后）</td><td>缓存仍指向被删的图。勾选「检测缓存图片是否还在」再转一次，会自动重导缺失的图（结果显示「重导 N」）</td></tr>
+    <tr><td>某些图层没生成</td><td>检查是不是命中忽略规则（<code>//</code>、<code>ref_</code>、<code>tmp_</code>、隐藏、全透明、空层）</td></tr>
+    <tr><td>某个图片节点尺寸特别大 / 图标偏到角落</td><td>该图层是“小图 + 一大圈透明”，包围盒没裁紧。保持「裁剪图片四周透明边」勾选并重转即可（结果会显示「裁剪 N」）</td></tr>
+    <tr><td>位置有偏差</td><td>确认图层无多余图层样式（投影/外发光会撑大包围盒）；文字层若要像素级一致，建议直接做成图</td></tr>
+    <tr><td>同图没被复用</td><td>确认两图像素完全一致；带 <code>@unique</code> 的会强制独立；缩放过的图 MD5 不同</td></tr>
+    <tr><td>节点名没语义（形状/矩形/图层）</td><td>这是 PS 默认层名,工具只能保证唯一+英文。让美术给代码要用的层起有意义的名字(见命名规范第十二节)</td></tr>
+  </table>
+
+  <footer>
+    cocos-psd-prefab-2x · 适配 Cocos Creator 2.4.15<br>
+    命名规范见同目录 <code>PSD命名规范.md</code>。<br>
+    本指南中的面板与流程为示意图（非真实截图）。
+  </footer>
+
+</div>
+</body>
+</html>
