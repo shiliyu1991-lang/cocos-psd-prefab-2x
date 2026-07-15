@@ -23,6 +23,35 @@ function _err(e) {
 }
 function _editorLog() { try { Editor.log.apply(Editor, arguments); } catch (e) { /* ignore */ } }
 
+function _loadCore() {
+    try {
+        return require(Path.join(__dirname, 'lib', 'convert.js'));
+    } catch (e) {
+        throw new Error('failed to load converter deps (ag-psd / pngjs / pinyin-pro). They are '
+            + 'normally vendored under ' + Path.join(__dirname, 'node_modules')
+            + '. If missing, run `npm install` in ' + __dirname + '. '
+            + (e && e.message ? e.message : String(e)));
+    }
+}
+
+// Read-only pass: cluster visually-similar images so the panel can list them.
+// Writes nothing. Returns { imageCount, uniqueCount, algo, threshold, groups }.
+async function scanSimilarPsd(params) {
+    params = params || {};
+    if (!params.psdPath) throw new Error('scan-similar-psd needs psdPath');
+    const core = _loadCore();
+    return core.scanSimilar({
+        psdPath: params.psdPath,
+        prefabName: (params.name && String(params.name).trim()) || undefined,
+        trimTransparent: params.trim !== false,
+        flattenWrappers: params.flatten !== false,
+        mergeDecor: !!params.mergeDecor,
+        keepHidden: !!params.keepHidden,
+        simAlgo: params.simAlgo === 'ahash' ? 'ahash' : 'dhash',
+        simThreshold: (params.simThreshold != null) ? (params.simThreshold | 0) : 5,
+    });
+}
+
 // Run a conversion and import the result. Returns the converter report.
 async function convertPsd(params) {
     params = params || {};
@@ -31,15 +60,7 @@ async function convertPsd(params) {
     const projectRoot = _safe(() => Editor.Project.path, null);
     if (!projectRoot) throw new Error('cannot resolve Editor.Project.path');
 
-    let core;
-    try {
-        core = require(Path.join(__dirname, 'lib', 'convert.js'));
-    } catch (e) {
-        throw new Error('failed to load converter deps (ag-psd / pngjs / pinyin-pro). They are '
-            + 'normally vendored under ' + Path.join(__dirname, 'node_modules')
-            + '. If missing, run `npm install` in ' + __dirname + '. '
-            + (e && e.message ? e.message : String(e)));
-    }
+    const core = _loadCore();
 
     const outDir = (params.outDir && String(params.outDir).trim()) || 'PSD';
     const report = await core.convert({
@@ -48,11 +69,13 @@ async function convertPsd(params) {
         outDir: outDir,
         prefabName: (params.name && String(params.name).trim()) || undefined,
         dedup: params.dedup !== false,
+        dedupAll: !!params.dedupAll,
         trimTransparent: params.trim !== false,
         flattenWrappers: params.flatten !== false,
         mergeDecor: !!params.mergeDecor,
         validateCache: !!params.validateCache,
         keepHidden: !!params.keepHidden,
+        mergeMap: (params.mergeMap && typeof params.mergeMap === 'object') ? params.mergeMap : null,
     });
 
     // Import the new assets (fire-and-forget; a refresh can be slow).
@@ -78,6 +101,12 @@ module.exports = {
         // Panel -> run a conversion. Replies via event.reply(err, data).
         'convert-psd'(event, params) {
             convertPsd(params || {}).then(
+                (r) => event.reply(null, r),
+                (e) => event.reply(_err(e).message));
+        },
+        // Panel -> scan for visually-similar images (read-only). Replies with clusters.
+        'scan-similar-psd'(event, params) {
+            scanSimilarPsd(params || {}).then(
                 (r) => event.reply(null, r),
                 (e) => event.reply(_err(e).message));
         },
